@@ -1,34 +1,35 @@
-package com.example.test_lab_week_12
+class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel() {
 
-import androidx.lifecycle.ViewModel
+    private val _popularMovies = MutableStateFlow(emptyList<Movie>())
+    val popularMovies: StateFlow<List<Movie>> = _popularMovies
 
-class MovieViewModel(private val movieRepository: MovieRepository)
-    : ViewModel() {
+    private val _error = MutableStateFlow("")
+    val error: StateFlow<String> = _error
+
     init {
         fetchPopularMovies()
     }
-    private val _popularMovies = MutableStateFlow(
-        emptyList<Movie>()
-    )
-    val popularMovies: StateFlow<List<Movie>> = _popularMovies
-    private val _error = MutableStateFlow("")
-    val error: StateFlow<String> = _error
-    // fetch movies from the API
+
     private fun fetchPopularMovies() {
-// launch a coroutine in viewModelScope
-// Dispatchers.IO means that this coroutine will run on a shared pool of threads
         viewModelScope.launch(Dispatchers.IO) {
-            movieRepository.fetchMovies().catch {
-// catch is a terminal operator that catches exceptions
-                from the Flow
-                _error.value = "An exception occurred: ${it.message}"
-            }.collect {
-// collect is a terminal operator that collects the values from the Flow
-// the results are emitted to the StateFlow
-                        _popularMovies.value = it
-            }
+            movieRepository.fetchMovies()
+                .catch { exception ->
+                    _error.value = "An exception occurred: ${exception.message}"
+                }
+                .collect { movies ->
+
+                    // assignment
+                    val currentYear = Calendar.getInstance().get(Calendar.YEAR).toString()
+
+                    val filteredMovies = movies
+                        .filter { movie ->
+                            movie.releaseDate?.startsWith(currentYear) == true
+                        }
+                        .sortedByDescending { it.popularity }
+
+                    // Emit hasil filter ke StateFlow
+                    _popularMovies.value = filteredMovies
+                }
         }
     }
-
-}
 }
