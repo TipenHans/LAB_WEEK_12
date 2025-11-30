@@ -13,15 +13,12 @@ class MovieRepository(private val movieService: MovieService) {
     val error: LiveData<String>
         get() = errorLiveData
     // fetch movies from the API
-    suspend fun fetchMovies() {
-        try {
-// get the list of popular movies from the API
-            val popularMovies = movieService.getPopularMovies(apiKey)
-            movieLiveData.postValue(popularMovies.results)
-        } catch (exception: Exception) {
-// if an error occurs, post the error message to the errorLiveData
-            errorLiveData.postValue(
-                "An error occurred: ${exception.message}")
-        }
+    fun fetchMovies(): Flow<List<Movie>> {
+        return flow {
+// emit the list of popular movies from the API
+            emit(movieService.getPopularMovies(apiKey).results)
+// use Dispatchers.IO to run this coroutine on a shared pool of threads
+        }.flowOn(Dispatchers.IO)
     }
+
 }
